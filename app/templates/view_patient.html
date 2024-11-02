@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}ART Predict - Clinician Dashboard{% endblock %}
+{% block content %}
+
+<div class="content" id="view-patient" >
+    <h1>View Patient Data</h1>
+    <p>Enter Patient ID:</p>
+    <form method="POST">
+        {% csrf_token %}
+        <input type="text" name="patient_id" placeholder="Patient ID" required>
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if patient %}
+    <div id="patient-details" class="patient-details" >
+        <h2>Patient Details</h2>
+        <p id="details-content"><strong>Patient ID:</strong> {{ patient.patient_id }}</p>
+        <p id="details-content"><strong>Age:</strong> {{ patient.age }}</p>
+        <p id="details-content"><strong>Gender:</strong> {{ patient.gender }}</p>
+        <p id="details-content"><strong>Viral Load:</strong> {{ patient.viral_load }}</p>
+        <p id="details-content"><strong>CD4 Count:</strong> {{ patient.cd4_count }}</p>
+        <p id="details-content"><strong>Adherence Level:</strong> {{ patient.adherence_level }}</p>
+        <div style="max-height: 100px; max-width: auto; overflow-y: auto;  border: 1px solid #ccc; padding: 10px;">
+            <p id="details-content"><strong>Sequence Data:</strong> {{ patient.sequence_data }}</p>
+        </div>
+        <p id="details-content">
+       <strong>Treatment Response:</strong> <span style="padding-left: 10px; padding-right: 10px; background-color: {% if patient.treatment_response == 'Responder' %}lightgreen{% else %}#ef5454{% endif %};">{{ patient.treatment_response }}</span>
+    </p>
+    <p>
+        <a href="{% url 'download_diagnosis' patient.patient_id %}" download>
+            Download Full Diagnosis
+        </a>
+    </p>
+    </div>
+    {% else %}
+    <p id="details-content">No such Patient Found</p>
+    {% endif %}
+</div>
+
+
+{% endblock %}

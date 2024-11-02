@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}ART Predict - Clinician Dashboard{% endblock %}
+{% block content %}
+
+<div class="content">
+    <h1>Add New Patient</h1>
+    <p>
+        <a href="{{google_form_url}}" target="_blank">Enter Patient Details</a>
+    </p>
+
+    <div>
+        <h1>Or Add Patient Manually</h1>
+        <form method="post" action="{% url 'add_patient' %}">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Add Patient</button>
+        </form>
+    </div>
+    
+    <div class="button-group">
+        <button onclick="loadPatientDetails()">View Patient Details</button>
+        <button onclick="loadPredictionResult()">View Prediction Result</button>
+        <button onclick="writeDiagnosis()">Write Diagnosis</button>
+    </div>
+
+    <div id="patient-details" class="patient-info" style="display:none;">
+        <!-- <h2>Patient Details</h2> -->
+        <div class="details-box">
+            <p id="details-content"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    function loadPatientDetails() {
+        fetch("{% url 'view_recent_patient' %}")
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('details-content').innerHTML = `
+                    <h2>Patient Details</h2>
+                    <strong>Patient ID:</strong> ${data.patient_id} <br>
+                    <strong>Age:</strong> ${data.age} <br>
+                    <strong>Gender:</strong> ${data.gender} <br>
+                    <strong>Viral Load:</strong> ${data.viral_load} <br>
+                    <strong>CD4 Count:</strong> ${data.cd4_count} <br>
+                    <strong>Adherence Level:</strong> ${data.adherence_level} <br>
+                    <strong>Sequence Data:</strong> ${data.sequence_data}
+                `;
+                document.getElementById('patient-details').style.display = 'block';
+            });
+    }
+
+    function loadPredictionResult() {
+        fetch("{% url 'view_recent_prediction' %}")
+            .then(response => response.json())
+            .then(data => {
+                console.log(data)
+                document.getElementById('details-content').innerHTML = `
+                <h2>Patient Prediction Details</h2>
+                    <strong>Patient ID:</strong> ${data.patient_id} <br>
+                <strong>Prediction Response:</strong> ${data.predicted_response} <br>
+                <strong>Confidence Score:</strong> ${data.confidence_score} <br>
+                <strong>LIME Interpretation:</strong> ${data.feature_importance}`;
+                document.getElementById('patient-details').style.display = 'block';
+            });
+    }
+
+    
+    function writeDiagnosis() {
+        const diagnosis = prompt("Enter diagnosis for the patient:");
+        if (diagnosis) {
+            fetch("{% url 'write_diagnosis' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: JSON.stringify({ diagnosis })
+            }).then(response => {
+                if (response.ok) {
+                    alert("Diagnosis saved successfully!");
+                }
+            });
+        }
+    }
+</script>
+
+{% endblock %}

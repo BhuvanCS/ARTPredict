@@ -1,0 +1,49 @@
+{% extends 'base_ds.html' %}
+{% block title %}ART Predict - Clinician Dashboard{% endblock %}
+{% block content %}
+
+<div class="content">
+
+  <h1>Model Evaluation Metrics</h1>
+  <p id="metrics-content"><strong>Accuracy: </strong>
+    {{ accuracy|floatformat:2 }}
+  </p>
+  <p id="metrics-content"><strong>Precision: </strong>
+    {{ precision|floatformat:2 }}
+  </p>
+  <p id="metrics-content"><strong>Recall: </strong>
+    {{ recall|floatformat:2 }}
+  </p>
+  <p id="metrics-content"><strong>F1 Score: </strong>
+    {{ f1|floatformat:2 }}
+  </p>
+
+  <h3>Classification Report</h3>
+  <table class = 'metrics-table'>
+    {% for label, metrics in class_report.items %}
+    {% if label != "accuracy" %}
+
+    <tr>
+      <th>
+        {{ label }}
+      </th>
+      {% for metric, value in metrics.items %}
+      <td>
+        {{ value|floatformat:2 }}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endif %}
+    {% endfor %}
+  </table>
+  <h3>Confusion Matrix</h3>
+  {% load static %}
+  <img class = 'metrics-image' src="{% static 'images/confusion_matrix.png' %}" alt="Confusion Matrix">
+
+  <h3>ROC Curve</h3>
+<img class = 'metrics-image' src="{% static 'images/roc_curve.png' %}" alt="ROC Curve">
+
+
+</div>
+
+{% endblock %}
