@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import PatientRecord, PredictionResult, Interpretation, FeedbackData, AppUser, Diagnosis
 from .forms import PatientForm
-from .helpers import generate_pdf, preprocess_new_data, get_eval_metrics
+from .helpers import generate_pdf, preprocess_new_data, get_eval_metrics, plot_roc_curve, plot_conf_matrix
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
@@ -15,8 +15,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import os
 from tensorflow.keras.models import load_model
-import seaborn as sns
-from sklearn.metrics import roc_curve, auc
+
+
 
 matplotlib.use('Agg')
 
@@ -237,28 +237,12 @@ def model_metrics(request):
         print(class_report)
 
         # Plot confusion matrix
-        plt.figure(figsize=(8, 6))
-        sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['Non-Responder', 'Responder'], yticklabels=['Non-Responder', 'Responder'], annot_kws={"size": 12})
-        plt.xlabel('Predicted')
-        plt.ylabel('Actual')
-        plt.title('Confusion Matrix')
         conf_matrix_path = 'app/static/images/confusion_matrix.png'
-        plt.savefig(conf_matrix_path)
-        plt.close()  
-
+        plot_conf_matrix(conf_matrix, conf_matrix_path)
+        
         # ROC Curve
-        fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
-        roc_auc = auc(fpr, tpr)
-        plt.figure()
-        plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC Curve (AUC = {roc_auc:.2f})')
-        plt.plot([0, 1], [0, 1], color='grey', linestyle='--')
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('Receiver Operating Characteristic (ROC) Curve')
-        plt.legend(loc="lower right")
         roc_curve_path = 'app/static/images/roc_curve.png'
-        plt.savefig(roc_curve_path)
-        plt.close()
+        plot_roc_curve(y_test, y_pred_proba, roc_curve_path)
 
         context = {
             'accuracy': accuracy,

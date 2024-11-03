@@ -8,6 +8,9 @@ import joblib
 import os
 import pandas as pd
 import numpy as np
+from sklearn.metrics import roc_curve, auc
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.metrics import classification_report, accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 def preprocess_new_data(viral_load, cd4_count, adherence_level, output_dir='app/data/preprocessed_data'):
@@ -105,3 +108,26 @@ def get_eval_metrics(y_test, y_pred):
     class_report = classification_report(y_test, y_pred, target_names=['Non-Responder', 'Responder'], output_dict=True)
 
     return accuracy, precision, recall, f1, conf_matrix, class_report
+
+def plot_roc_curve(y_test, y_pred_proba, roc_curve_path):
+    fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
+    roc_auc = auc(fpr, tpr)
+    plt.figure()
+    plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC Curve (AUC = {roc_auc:.2f})')
+    plt.plot([0, 1], [0, 1], color='grey', linestyle='--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.legend(loc="lower right")
+    plt.savefig(roc_curve_path)
+    plt.close()
+
+def plot_conf_matrix(conf_matrix, conf_matrix_path):
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['Non-Responder', 'Responder'], yticklabels=['Non-Responder', 'Responder'], annot_kws={"size": 12})
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title('Confusion Matrix')
+    
+    plt.savefig(conf_matrix_path)
+    plt.close()  

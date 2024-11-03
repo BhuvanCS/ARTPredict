@@ -5,6 +5,10 @@
 <div class="content">
 
   <h1>Model Evaluation Metrics</h1>
+  {% if error_message %}
+  <h3>{{error_message}}</h3>
+  {% else %}
+  
   <p id="metrics-content"><strong>Accuracy: </strong>
     {{ accuracy|floatformat:2 }}
   </p>
@@ -43,7 +47,7 @@
   <h3>ROC Curve</h3>
 <img class = 'metrics-image' src="{% static 'images/roc_curve.png' %}" alt="ROC Curve">
 
-
+{% endif %}
 </div>
 
 {% endblock %}
