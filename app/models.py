@@ -53,11 +53,4 @@ class Diagnosis(models.Model):
     def __str__(self):
         return f"Diagnosis for {self.patient.patient_id}"
 
-class FeedbackData(models.Model):
-    patient = models.ForeignKey(PatientRecord, on_delete=models.CASCADE, related_name='feedback_data')
-    actual_response = models.CharField(max_length=100)
-    comments = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return f"Feedback for Patient {self.patient.patient_id}"
     

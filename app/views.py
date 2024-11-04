@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import PatientRecord, PredictionResult, Interpretation, FeedbackData, AppUser, Diagnosis
+from .models import PatientRecord, PredictionResult, Interpretation, AppUser, Diagnosis
 from .forms import PatientForm
 from .helpers import generate_pdf, preprocess_new_data, get_eval_metrics, plot_roc_curve, plot_conf_matrix
 from django.contrib.auth import authenticate, login, logout
