@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import PatientRecord, PredictionResult, Interpretation, AppUser, Diagnosis
 from .forms import PatientForm
-from .helpers import generate_pdf, preprocess_new_data, get_eval_metrics, plot_roc_curve, plot_conf_matrix
+from .helpers import generate_pdf, preprocess_new_data, encode_sequence, get_sequence_feature_names, get_eval_metrics, plot_roc_curve, plot_conf_matrix
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
@@ -15,6 +15,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import os
 from tensorflow.keras.models import load_model
+import shap
 
 
 
@@ -105,23 +106,40 @@ def add_patient(request):
         form = PatientForm(request.POST)
         if form.is_valid():
             form.save()
-            global_x_train = np.load('app/models/x_train.npy')
+            global_x_train_seq_nn = np.load('app/models/x_train_seq_nn.npy')
             global_x_train_nn = np.load('app/models/x_train_nn.npy')
             viral_load = float(request.POST['viral_load'])
             cd4_count = float(request.POST['cd4_count'])
             adherence_level = float(request.POST['adherence_level'])
+            sequence_data = request.POST['sequence_data'] 
+            strain_type = request.POST['strain_type']
 
             viral_load, cd4_count, adherence_level = preprocess_new_data(viral_load, cd4_count, adherence_level)[0]
             
-            input_data = np.array([[viral_load, cd4_count, adherence_level]])
+            encoded_sequence = encode_sequence(sequence_data)
+            print(encoded_sequence.shape)
+            encoded_strain = 1 if strain_type == 'HIV-2' else 0
+            encoded_sequence = np.expand_dims(encoded_sequence, axis=0)
+            print(encoded_sequence.shape)
+
+            # max_seq_length = encoded_sequence.shape[0]
+            # if max_seq_length < nn_model.input_shape[1][1]:  # Adjust sequence length if needed
+            #     padding = np.zeros((nn_model.input_shape[1][1] - max_seq_length, 4))
+            #     encoded_sequence = np.vstack([encoded_sequence, padding])
+            #encoded_sequence = np.expand_dims(encoded_sequence, axis=0)  # Shape (1, max_seq_length, 4)
+
+            numerical_data = np.array([[viral_load, cd4_count, adherence_level, encoded_strain]])
+            #input_data = np.array([[viral_load, cd4_count, adherence_level] + encoded_sequence + [encoded_strain]])
 
             #predicted_response = model.predict(input_data)[0]
-            predicted_response = nn_model.predict(input_data)[0]
-            print(predicted_response)
+            print(encoded_sequence)
+            predicted_probabilities = nn_model.predict([numerical_data, encoded_sequence])[0]
+            #predicted_probabilities = nn_model.predict([numerical_data, np.array([encoded_sequence])])[0]
+            print(predicted_probabilities)
             #predicted_response = 'Responder' if predicted_response == 1 else 'Non-Responder'
-            predicted_response = 'Responder' if predicted_response[0] > 0.45 else 'Non-Responder'
-            confidence_score = max(model.predict_proba(input_data)[0])
-            print(predicted_response)
+            predicted_response = 'Responder' if predicted_probabilities[0] > 0.45 else 'Non-Responder'
+            confidence_score = float(predicted_probabilities[0]) if predicted_response == 'Responder' else float(1 - predicted_probabilities[0])
+            print(predicted_response, confidence_score)
 
             patient = PatientRecord.objects.get(patient_id=request.POST['patient_id'])
 
@@ -129,19 +147,26 @@ def add_patient(request):
             explainer = LimeTabularExplainer(
                 training_data=global_x_train_nn,
                 #training_data=global_x_train,
-                feature_names=['Viral_Load', 'CD4_Count', 'Adherence_Level'],
+                feature_names=['Viral_Load', 'CD4_Count', 'Adherence_Level', 'Strain_Type'],
                 mode='classification'
             )
 
-            def predict_fn(data):
-                probabilities = nn_model.predict(data)
-                # For binary classification, probabilities will be of shape (n_samples, 1)
-                return np.hstack((1 - probabilities, probabilities))  # Shape (n_samples, 2)
+            def predict_fn(x):
+                # Get the batch size of `x`
+                batch_size = x.shape[0]
+                
+                # Repeat `encoded_sequence` along the batch dimension to match `x`
+                sequence_batch = np.tile(encoded_sequence, (batch_size, 1, 1))
+                
+                # Predict using the neural network model with both numerical and sequence data
+                probabilities = nn_model.predict([x, sequence_batch])
+                
+                # Ensure the shape is (n_samples, 2) for binary classification by stacking probabilities
+                return np.hstack((1 - probabilities, probabilities))
             
-            print(input_data[0])
+            #print(input_data[0])
             explanation = explainer.explain_instance(
-                data_row=input_data[0],
-                #predict_fn=model.predict_proba
+                data_row=numerical_data[0],
                 predict_fn=predict_fn
             )
 
@@ -149,6 +174,34 @@ def add_patient(request):
             
             patient.treatment_response = predicted_response
             patient.save()
+
+            sample_numerical_data = np.array([viral_load, cd4_count, adherence_level, encoded_strain])
+            sample_sequence_data = encoded_sequence
+
+            print(sample_numerical_data.shape, sample_sequence_data.shape)
+
+            n_steps = sample_sequence_data.shape[0]  # Number of time steps (3 in this case)
+            n_features = sample_numerical_data.shape[0]
+
+            expanded_numerical_data = sample_numerical_data.reshape(1,1,4)
+            #expanded_numerical_data = expanded_numerical_data.reshape(1, n_steps, n_features)
+
+            sample_sequence_data = sample_sequence_data.reshape(1, sample_sequence_data.shape[1], 4)
+
+            print("Expanded Numerical Data Shape:", expanded_numerical_data.shape)  # (1, 1, 4)
+            print("Reshaped Sequence Data Shape:", sample_sequence_data.shape)  # (1, 500, 4)
+            # Create SHAP explainer
+            # shap_explainer = shap.DeepExplainer(nn_model, [global_x_train_nn, global_x_train_seq_nn])
+            # shap_values = shap_explainer.shap_values([expanded_numerical_data, sample_sequence_data])
+
+            # # Create SHAP summary or force plot
+            # shap_summary = shap.summary_plot(shap_values, [sample_numerical_data, sample_sequence_data], show=False)
+            # plt.title("SHAP Values for Patient Prediction")
+            # # Save the SHAP plot to a directory
+            # image_path = f'app/int_images/patient_shap_{patient.patient_id}.png'  # Change path as needed
+            # os.makedirs(os.path.dirname(image_path), exist_ok=True)  # Ensure the directory exists
+            # plt.savefig(image_path)
+            # plt.close()
 
             PredictionResult.objects.create(
                 patient = patient,

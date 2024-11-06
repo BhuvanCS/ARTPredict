@@ -17,13 +17,18 @@ class AppUser(models.Model):
         return self.user.username
 
 class PatientRecord(models.Model):
+    STRAIN_CHOICES = [
+        ('HIV-1', 'HIV-1'),
+        ('HIV-2', 'HIV-2'),
+    ]
     patient_id = models.CharField(max_length=50, unique=True)
     age = models.PositiveIntegerField(null = True, blank = True)
     gender = models.CharField(max_length=10, null = True, blank = True)
     viral_load = models.FloatField()
     cd4_count = models.FloatField()
-    adherence_level = models.CharField(max_length=50)
+    adherence_level = models.FloatField(max_length=50)
     sequence_data = models.TextField()
+    strain_type = models.CharField(max_length=10, choices=STRAIN_CHOICES,null = True, default = "HIV-1")
     treatment_response = models.CharField(max_length=50, default = 'Non-Responder')  
 
     def __str__(self):

@@ -22,11 +22,12 @@ class Command(BaseCommand):
                     # Check for header line starting with ">"
                     if line.startswith(">"):
                         if patient_id and sequence_data:
-                            self.save_sequence_data(patient_id, sequence_data)
+                            self.save_sequence_data(patient_id, sequence_data, strain_type)
                             
                         # Patient_ID from header (format >P_1 | ...)
                         header_parts = line[1:].split("|")
-                        patient_id = header_parts[0].strip()
+                        patient_id = header_parts[0].strip().upper()
+                        strain_type = header_parts[1].strip().upper()
                         sequence_data = ""  
                     
                     else:
@@ -40,10 +41,11 @@ class Command(BaseCommand):
         except FileNotFoundError:
             self.stderr.write(self.style.ERROR(f"File {fasta_file} not found."))
 
-    def save_sequence_data(self, patient_id, sequence_data):
+    def save_sequence_data(self, patient_id, sequence_data, strain_type):
         try:
             patient_record = PatientRecord.objects.get(patient_id=patient_id)
             patient_record.sequence_data = sequence_data
+            patient_record.strain_type = strain_type
             patient_record.save()
             self.stdout.write(f"Updated sequence data for {patient_id}")
         

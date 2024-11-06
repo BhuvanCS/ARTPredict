@@ -15,7 +15,6 @@ from sklearn.metrics import classification_report, accuracy_score, precision_sco
 
 def preprocess_new_data(viral_load, cd4_count, adherence_level, output_dir='app/data/preprocessed_data'):
     mean_imputer = joblib.load(os.path.join(output_dir, 'mean_imputer.pkl'))
-    scaler = joblib.load(os.path.join(output_dir, 'scaler.pkl'))
 
     new_data = pd.DataFrame({
         'Viral_Load': [viral_load],
@@ -28,10 +27,41 @@ def preprocess_new_data(viral_load, cd4_count, adherence_level, output_dir='app/
 
     new_data[['Viral_Load', 'CD4_Count']] = mean_imputer.transform(new_data[['Viral_Load', 'CD4_Count']])
 
-    # Normalize the continuous features
-    new_data[['Viral_Load', 'CD4_Count']] = scaler.transform(new_data[['Viral_Load', 'CD4_Count']])
-
     return new_data.values 
+
+def encode_sequence(sequence):
+    # Define encoding for A, T, G, C
+    encoding = {'A': [1, 0, 0, 0],
+                'T': [0, 1, 0, 0],
+                'G': [0, 0, 1, 0],
+                'C': [0, 0, 0, 1]}
+    
+    # Create a matrix for the encoded sequence
+    encoded_sequence = []
+    for nucleotide in sequence:
+        if nucleotide in encoding:
+            encoded_sequence.append(encoding[nucleotide])
+        else:
+            encoded_sequence.append([0, 0, 0, 0])  # For unknown nucleotides
+    
+    return np.array(encoded_sequence)
+def get_sequence_feature_names(sequence_length):
+    """
+        sequence_length (int): The length of the nucleotide sequence being encoded.
+
+    Returns:
+        list: List of feature names corresponding to one-hot encoded nucleotides.
+    """
+    # Define the nucleotide types
+    nucleotides = ['A', 'T', 'G', 'C']
+    
+    # Create feature names for each position in the sequence
+    feature_names = []
+    for i in range(sequence_length):
+        for nucleotide in nucleotides:
+            feature_names.append(f"Nucleotide_{nucleotide}_{i+1}")  # 1-based indexing
+
+    return feature_names
 
 def generate_pdf(response, patient, prediction, interpretation, diagnosis):
     p = canvas.Canvas(response, pagesize=A4)
