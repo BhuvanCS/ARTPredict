@@ -261,18 +261,21 @@ def write_diagnosis(request):
 
 def model_metrics(request):
     model_path = 'app/models/neural_network_model.h5'
-    x_test_path = 'app/models/x_test_nn.npy'
+    x_test_num_path = 'app/models/x_test_nn.npy'
+    x_test_seq_path = 'app/models/x_test_seq_nn.npy'
     y_test_path = 'app/models/y_test_nn.npy'
     
-    if os.path.exists(model_path) and os.path.exists(x_test_path) and os.path.exists(y_test_path):
+    if os.path.exists(model_path) and os.path.exists(x_test_num_path) and os.path.exists(x_test_seq_path) and os.path.exists(y_test_path):
         model = load_model(model_path)
-        X_test = np.load(x_test_path)
+        X_test_num = np.load(x_test_num_path)
+        X_test_seq = np.load(x_test_seq_path)
         y_test = np.load(y_test_path)
         
-        y_pred_proba = model.predict(X_test)
-        y_pred = (y_pred_proba > 0.5).astype(int).flatten()  # Convert probabilities to binary predictions
+        y_pred_proba = model.predict([X_test_num, X_test_seq])
+        y_pred = np.argmax(y_pred_proba, axis=1)
+        y_test_labels = np.argmax(y_test, axis=1)
         
-        accuracy, precision, recall, f1, conf_matrix, class_report = get_eval_metrics(y_test, y_pred)
+        accuracy, precision, recall, f1, conf_matrix, class_report = get_eval_metrics(y_test_labels, y_pred)
 
         print(class_report)
 
@@ -282,7 +285,7 @@ def model_metrics(request):
         
         # ROC Curve
         roc_curve_path = 'app/static/images/roc_curve.png'
-        plot_roc_curve(y_test, y_pred_proba, roc_curve_path)
+        plot_roc_curve(y_test_labels, y_pred, roc_curve_path)
 
         context = {
             'accuracy': accuracy,
