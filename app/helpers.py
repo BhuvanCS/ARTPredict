@@ -30,19 +30,9 @@ def preprocess_new_data(viral_load, cd4_count, adherence_level, output_dir='app/
     return new_data.values 
 
 def encode_sequence(sequence):
-    # Define encoding for A, T, G, C
-    encoding = {'A': [1, 0, 0, 0],
-                'T': [0, 1, 0, 0],
-                'G': [0, 0, 1, 0],
-                'C': [0, 0, 0, 1]}
-    
-    # Create a matrix for the encoded sequence
-    encoded_sequence = []
-    for nucleotide in sequence:
-        if nucleotide in encoding:
-            encoded_sequence.append(encoding[nucleotide])
-        else:
-            encoded_sequence.append([0, 0, 0, 0])  # For unknown nucleotides
+     # One-hot encode A, T, C, G (4 bases)
+    encoding_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
+    return np.array([encoding_dict.get(base, [0, 0, 0, 0]) for base in sequence])
     
     return np.array(encoded_sequence)
 def get_sequence_feature_names(sequence_length):
@@ -105,8 +95,8 @@ def generate_pdf(response, patient, prediction, interpretation, diagnosis):
     explanation_paragraph = Paragraph(interpretation.explanation if interpretation else 'N/A', style)
         
     explanation_paragraph.wrap(width - 100, height)  # Width constraint, adjust if necessary
-    explanation_paragraph.drawOn(p, 50, y-15)
-    y -= 45
+    explanation_paragraph.drawOn(p, 50, y-35)
+    y -= 65
 
     if interpretation.lime_image:
         p.setFont("Helvetica-Bold", 14)
