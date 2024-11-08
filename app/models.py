@@ -44,9 +44,9 @@ class PredictionResult(models.Model):
 
 class Interpretation(models.Model):
     patient = models.OneToOneField(PatientRecord, on_delete=models.CASCADE, related_name='interpretation')
-    feature_importance = models.TextField(null=True, blank=True, help_text="Feature importance scores for the model's prediction.")
     explanation = models.TextField(blank=True, null=True, help_text="Brief explanation of the model's prediction reason.")
     lime_image = models.ImageField(upload_to='app/int_images/lime_explanations/', blank=True, null=True)
+    attention_image = models.ImageField(upload_to='app/int_images/attention_weights/', blank=True, null=True)
     
     def __str__(self):
         return f"Interpretation for Patient {self.patient.patient_id}"

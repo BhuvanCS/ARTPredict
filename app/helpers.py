@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
+import tensorflow as tf
 import seaborn as sns
 from sklearn.metrics import classification_report, accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
@@ -34,24 +35,24 @@ def encode_sequence(sequence):
     encoding_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
     return np.array([encoding_dict.get(base, [0, 0, 0, 0]) for base in sequence])
     
-    return np.array(encoded_sequence)
-def get_sequence_feature_names(sequence_length):
-    """
-        sequence_length (int): The length of the nucleotide sequence being encoded.
 
-    Returns:
-        list: List of feature names corresponding to one-hot encoded nucleotides.
-    """
-    # Define the nucleotide types
-    nucleotides = ['A', 'T', 'G', 'C']
+def plot_attention_weights(pid, attention_weights, output_dir='app/temp/'):
+    os.makedirs(output_dir, exist_ok=True)
+    print(attention_weights)
+    attention_map = attention_weights
+    attention_map = np.squeeze(attention_map) 
+    attention_map = tf.nn.softmax(attention_map, axis=-1).numpy()
+    plt.figure(figsize=(12, 6))
+    sns.heatmap(attention_map, cmap='viridis')
     
-    # Create feature names for each position in the sequence
-    feature_names = []
-    for i in range(sequence_length):
-        for nucleotide in nucleotides:
-            feature_names.append(f"Nucleotide_{nucleotide}_{i+1}")  # 1-based indexing
-
-    return feature_names
+    plt.title(f'Attention Weights for Patient {pid}')
+    plt.xlabel('Time Steps')
+    plt.ylabel('Attention Weight')
+    
+    attention_image_path = os.path.join(output_dir, f"attention_sample_{pid}.png")
+    plt.savefig(attention_image_path)
+    plt.close()
+    return attention_image_path
 
 def generate_pdf(response, patient, prediction, interpretation, diagnosis):
     p = canvas.Canvas(response, pagesize=A4)
@@ -106,6 +107,15 @@ def generate_pdf(response, patient, prediction, interpretation, diagnosis):
         lime_image_path = interpretation.lime_image.path
         p.drawImage(lime_image_path, 50, y - 200, width=300, height=200)
         y -= 220 
+
+    if interpretation.attention_image:
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y, "Attention Weights for Sequence Data:")
+        y -= 20
+        
+        attention_image_path = interpretation.attention_image.path
+        p.drawImage(attention_image_path, 50, y - 200, width=600, height=200)
+        y -= 220
 
     # Diagnosis
     p.setFont("Helvetica-Bold", 14)

@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import PatientRecord, PredictionResult, Interpretation, AppUser, Diagnosis
 from .forms import PatientForm
-from .helpers import generate_pdf, preprocess_new_data, encode_sequence, get_eval_metrics, plot_roc_curve, plot_conf_matrix
+from .helpers import generate_pdf,  encode_sequence, plot_attention_weights, get_eval_metrics, plot_roc_curve, plot_conf_matrix
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
@@ -127,7 +127,7 @@ def add_patient(request):
 
             numerical_features = np.array([[viral_load, cd4_count, adherence_level, strain_type_encoded]])
             numerical_features = scaler.transform(numerical_features)
-            prediction = nn_model.predict([numerical_features, sequence_data_encoded])
+            prediction, attention_weights = nn_model.predict([numerical_features, sequence_data_encoded])
 
             predicted_class = np.argmax(prediction, axis=1)
             predicted_label = response_encoder.inverse_transform(predicted_class)[0]  # Decode the prediction
@@ -148,7 +148,7 @@ def add_patient(request):
 
                 for sample in input:
                     numerical_data = np.array(sample).reshape(1, -1)
-                    prediction = nn_model.predict([numerical_data, sequence_data_encoded.reshape(1,400,1)])
+                    prediction, _ = nn_model.predict([numerical_data, sequence_data_encoded.reshape(1,400,1)])
                     predictions.append(prediction[0])
                 
                 output =  np.array(predictions)
@@ -164,42 +164,7 @@ def add_patient(request):
             fig.savefig(temp_image_path, bbox_inches='tight')
             plt.close(fig)
 
-            def predict_fn_shap(inputs):
-                # Assuming the input is a tuple of numerical features and sequence data
-                numerical_data = inputs[:, :4]  # Reshape numerical features to (1, 4)
-                print(numerical_data.shape)
-                # Reshape sequence data to match model input (1, 400, 4)
-                sequence_data = inputs[:, 4:].reshape(-1, 400, 1)  # Adjust sequence length (400 in this case)
-                print(sequence_data.shape)
-                
-                predictions = []
-                for i in range(len(numerical_data)):
-                    # Get the individual data point
-                    num_input = numerical_data[i].reshape(1, 4)  # Reshape to (1, 4)
-                    seq_input = sequence_data[i].reshape(1, 400, 1)  # Reshape to (1, 400, 1)
-                    
-                    # Make prediction using the model (assuming nn_model.predict is the correct function)
-                    prediction = nn_model.predict([num_input, seq_input]).reshape(1,-1)
-                    predictions.append(prediction)
-                return np.vstack(predictions)
-            # SHAP interpretation
-            # Prepare the data for SHAP (Use both numerical and sequence features for SHAP explanation)
-            background_data_num = np.array(X_train_num)  # Shape: (num_samples, 4)
-            background_data_seq = np.array(X_train_seq)  # Shape: (num_samples, 400, 4)
-            print(background_data_num.shape, background_data_seq.shape)
-
-# Concatenate both numerical and sequence data (this is for background data)
-            background_data = np.concatenate([background_data_num, background_data_seq], axis=1)
-            background_data_sampled = shap.sample(background_data, 20)
-            explainer_shap = shap.GradientExplainer(nn_model, background_data_sampled)
-            input_data = np.concatenate([np.array(numerical_features[0]).reshape(1,4), sequence_data_encoded.reshape(1, 400)], axis=1)
-            print(input_data)
-            print(input_data.shape)
-            # shap_values = explainer_shap.shap_values([np.array(numerical_features[0]).reshape(1,4), sequence_data_encoded.reshape(1, 400, 1)])
-            # print("Done")
-            # # Plot and save SHAP summary plot
-            # shap.summary_plot(shap_values, input_data, plot_type="bar", show=False)
-            # plt.savefig(f'app/int_images/shap_explanations/shap_summary_plot_{patient.patient_id}.png')
+            attention_image_path = plot_attention_weights(patient.patient_id, attention_weights)
 
             PredictionResult.objects.create(
                 patient = patient,
@@ -209,14 +174,16 @@ def add_patient(request):
 
             Interpretation.objects.create(
                 patient = patient,
-                feature_importance = explanation_text,
                 explanation = explanation_text
             )
             interpretation = Interpretation.objects.get(patient=patient)
             with open(temp_image_path, 'rb') as image_file:
                 interpretation.lime_image.save(f'lime_explanation_{patient.patient_id}.png', File(image_file), save=True)
-
+                
+            with open(attention_image_path, 'rb') as image_file:
+                interpretation.attention_image.save(f'attention_mechanism_{patient.patient_id}.png', File(image_file), save=True)
             os.remove(temp_image_path)
+            os.remove(attention_image_path)
 
             return redirect('add_patient')
     else:
