@@ -16,9 +16,13 @@ class Command(BaseCommand):
             for row in csv_reader:
                 PatientRecord.objects.create(
                     patient_id=row['Patient_ID'],
+                    age=25,
+                    gender='Male',
                     viral_load=float(row['Viral_Load']),
-                    cd4_count=int(row['CD4_Count']),
+                    cd4_count=float(row['CD4_Count']),
                     adherence_level=float(row['Adherence_Level']),
+                    strain_type=str(row['Strain_Type']),
+                    sequence_data=str(row['Sequence_Data']),
                     treatment_response=row['Treatment_Response']
                 )
                 self.stdout.write(self.style.SUCCESS(f"Added patient {row['Patient_ID']}"))

@@ -43,7 +43,7 @@ def plot_attention_weights(pid, attention_weights, output_dir='app/temp/'):
     attention_map = np.squeeze(attention_map) 
     attention_map = tf.nn.softmax(attention_map, axis=-1).numpy()
     plt.figure(figsize=(12, 6))
-    sns.heatmap(attention_map, cmap='viridis')
+    sns.heatmap(attention_map, cmap='viridis', yticklabels=False)
     
     plt.title(f'Attention Weights for Patient {pid}')
     plt.xlabel('Time Steps')

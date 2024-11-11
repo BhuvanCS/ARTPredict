@@ -120,8 +120,7 @@ def add_patient(request):
             patient = PatientRecord.objects.get(patient_id=request.POST['patient_id'])
 
             sequence_data_encoded = encode_sequence(sequence_data)
-            #sequence_data_encoded = pad_sequences(sequence_data_encoded, maxlen=400, padding='post', truncating='post', dtype='float32')
-            sequence_data_encoded = sequence_data_encoded.reshape((1, 400, 1))  # (batch_size, sequence_length, num_features)
+            sequence_data_encoded = sequence_data_encoded.reshape((1, 400, 1))  
             print(sequence_data_encoded.shape)
             strain_type_encoded = strain_encoder.transform([strain_type])[0]
 
@@ -136,9 +135,9 @@ def add_patient(request):
             patient.save()
             print(predicted_label, predicted_class, confidence_score)
             explainer = LimeTabularExplainer(
-                X_train_num,  # Your training data for the numerical features
+                X_train_num,  
                 feature_names=['Viral_Load', 'CD4_Count', 'Adherence_Level', 'Strain_Type', 'Sequence_1'],  # Names of the numerical features
-                class_names=['Non-Responder', 'Responder'],  # Your class names
+                class_names=['Non-Responder', 'Responder'], 
                 discretize_continuous=True
             )
 
@@ -238,7 +237,7 @@ def model_metrics(request):
         X_test_seq = np.load(x_test_seq_path)
         y_test = np.load(y_test_path)
         
-        y_pred_proba = model.predict([X_test_num, X_test_seq])
+        y_pred_proba, _ = model.predict([X_test_num, X_test_seq])
         y_pred = np.argmax(y_pred_proba, axis=1)
         y_test_labels = np.argmax(y_test, axis=1)
         
