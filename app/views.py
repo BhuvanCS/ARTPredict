@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import PatientRecord, PredictionResult, Interpretation, AppUser, Diagnosis
 from .forms import PatientForm
-from .helpers import generate_pdf,  encode_sequence, plot_attention_weights, get_eval_metrics, plot_roc_curve, plot_conf_matrix
+from .helpers import generate_pdf,  encode_sequence, plot_attention_weights, plot_attention_weights2, get_eval_metrics, plot_roc_curve, plot_conf_matrix
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
@@ -127,7 +127,7 @@ def add_patient(request):
             numerical_features = np.array([[viral_load, cd4_count, adherence_level, strain_type_encoded]])
             numerical_features = scaler.transform(numerical_features)
             prediction, attention_weights = nn_model.predict([numerical_features, sequence_data_encoded])
-
+            print(attention_weights)
             predicted_class = np.argmax(prediction, axis=1)
             predicted_label = response_encoder.inverse_transform(predicted_class)[0]  # Decode the prediction
             confidence_score = prediction[0][predicted_class[0]]
@@ -164,6 +164,7 @@ def add_patient(request):
             plt.close(fig)
 
             attention_image_path = plot_attention_weights(patient.patient_id, attention_weights)
+            attention_image_path2 = plot_attention_weights2(patient.patient_id, attention_weights)
 
             PredictionResult.objects.create(
                 patient = patient,
@@ -180,7 +181,9 @@ def add_patient(request):
                 interpretation.lime_image.save(f'lime_explanation_{patient.patient_id}.png', File(image_file), save=True)
                 
             with open(attention_image_path, 'rb') as image_file:
-                interpretation.attention_image.save(f'attention_mechanism_{patient.patient_id}.png', File(image_file), save=True)
+                interpretation.attention_image.save(f'attention_heatmap_{patient.patient_id}.png', File(image_file), save=True)
+            with open(attention_image_path2, 'rb') as image_file:
+                interpretation.attention_image2.save(f'attention_mechanism_{patient.patient_id}.png', File(image_file), save=True)
             os.remove(temp_image_path)
             os.remove(attention_image_path)
 
