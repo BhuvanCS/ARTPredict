@@ -30,6 +30,12 @@ scaler = joblib.load('app/data/preprocessed_data/scaler.pkl')
 def homepage(request):
     return render(request, 'homepage.html')
 
+def contact_us_ds(request):
+    return render(request, 'contact_ds.html')
+
+def contact_us_clinician(request):
+    return render(request, 'contact_clinician.html')
+
 def loginds(request):
     if request.method == 'POST':
         username = request.POST['username']

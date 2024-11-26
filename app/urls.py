@@ -7,6 +7,7 @@ urlpatterns = [
     
     path('login/clinician', views.loginclinician, name='clinician-login'),
     path('clinician', views.clinician_dashboard, name='clinician_dashboard'),
+    path('clinician/contact-us', views.contact_us_clinician, name='contact_us_clinician'),
     path('clinician/view-patient', views.view_patient, name='view_patient'),
     path('clinician/download_diagnosis/<str:patient_id>', views.download_diagnosis, name='download_diagnosis'),
     path('clinician/view-recent-patient', views.view_recent_patient, name='view_recent_patient'),
@@ -16,6 +17,7 @@ urlpatterns = [
 
     path('login/ds', views.loginds, name='ds-login'),
     path('ds', views.ds_dashboard, name='ds_dashboard'),
+    path('ds/contact-us', views.contact_us_ds, name='contact_us_ds'),
     path('ds/model-metrics', views.model_metrics, name='model_metrics'),
     
 ]
